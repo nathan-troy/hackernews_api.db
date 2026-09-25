@@ -1,0 +1,77 @@
+CREATE TABLE dim_user (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    notification_pref VARCHAR(20) DEFAULT 'slack',
+    slack_webhook_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+    is_active BOOLEAN DEFAULT TRUE,
+    timezone VARCHAR(50) DEFAULT 'UTC'
+);
+
+CREATE TABLE dim_domain (
+    domain_hash VARCHAR(64) PRIMARY KEY,
+    domain_name VARCHAR(255) UNIQUE NOT NULL,
+    top_level_domain VARCHAR(20) NOT NULL,
+    registered_year INT,
+    is_malicious BOOLEAN DEFAULT FALSE
+); 
+
+CREATE TABLE dim_hackernews_item (
+    item_id INT PRIMARY KEY,
+    author_user VARCHAR(100) NOT NULL,
+    item_name TEXT NOT NULL,
+    item_type VARCHAR(50) NOT NULL,
+    score INT DEFAULT 0,
+    descendants INT DEFAULT 0,
+    posted_at_timestamp TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE sys_pipeline_log (
+    log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dag_run_id VARCHAR(100),
+    job_name VARCHAR(100) NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ended_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(20) NOT NULL,
+    records_processed INT DEFAULT 0,
+    error_message TEXT
+);
+
+CREATE TABLE dim_domain_history (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    domain_hash VARCHAR(64) REFERENCES dim_domain(domain_hash) ON DELETE CASCADE,
+    reliability_tier VARCHAR(50) NOT NULL,
+    valid_from TIMESTAMP WITH TIME ZONE NOT NULL,
+    valid_to TIMESTAMP WITH TIME ZONE,
+    is_current BOOLEAN DEFAULT TRUE,
+    previous_reliability_tier VARCHAR(50),
+    change_reason TEXT
+);
+
+CREATE TABLE fact_link_status (
+    check_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item_id INT REFERENCES dim_hackernews_item(item_id) ON DELETE CASCADE,
+    domain_hash VARCHAR(64) REFERENCES dim_domain(domain_hash) ON DELETE CASCADE,
+    log_id UUID REFERENCES sys_pipeline_log(log_id) ON DELETE CASCADE,
+    raw_url TEXT NOT NULL,
+    http_status_code INT,
+    response_time_ms INT,
+    is_dead BOOLEAN NOT NULL,
+    error_type VARCHAR(100),
+    check_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE fact_alerts (
+    alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES dim_user(user_id) ON DELETE CASCADE,
+    check_id UUID REFERENCES fact_link_status(check_id) ON DELETE CASCADE,
+    log_id UUID REFERENCES sys_pipeline_log(log_id) ON DELETE CASCADE,   
+    alert_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    delivery_status VARCHAR(50) NOT NULL,
+    retry_count INT DEFAULT 0,
+    channel_used VARCHAR(50) NOT NULL,
+    payload_size_bytes INT,
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
