@@ -48,9 +48,9 @@ The database consists of seven interconnected tables configured to track pipelin
 
 ## File Structure
 
-├── main.py        # Connects to the public API, parses URLs, and pings host servers.
-├── database.py    # Manages schema configurations, table indexes, and transaction writes.
-└── dasboard.py    # Queries DuckDB and renders interactive layout charts in the browser.
+ main.py        # Connects to the public API, parses URLs, and pings host servers.
+ database.py    # Manages schema configurations, table indexes, and transaction writes.
+ dasboard.py    # Queries DuckDB and renders interactive layout charts in the browser.
 
 ## Setup and Execution
 
